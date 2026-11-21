@@ -1,0 +1,4 @@
+{
+  "_说明": "可选配置。安装程序没自动找到 ZBrush 时，在下面填 ZBrush 安装根目录（含 ZBrush.exe 的那一层）。",
+  "zbrush_paths": []
+}

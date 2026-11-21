@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZBrush 分件碰撞检测插件 · 使用说明</title>
+<style>
+  :root{--bg:#12141a;--card:#1e222c;--card2:#262c39;--text:#e8ebf2;--muted:#9aa3b5;--accent:#4aa3ff;--ok:#2ecc71;--warn:#ffb020;--danger:#ff5c5c;--border:#333b4a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;line-height:1.75;font-size:15px}
+  .wrap{max-width:920px;margin:0 auto;padding:32px 22px 80px}
+  h1{font-size:26px;margin:0 0 6px}
+  h2{font-size:20px;margin:38px 0 14px;padding-left:12px;border-left:4px solid var(--accent)}
+  h3{font-size:16px;margin:22px 0 8px;color:var(--accent)}
+  p,li{color:var(--text)}
+  .hero{background:linear-gradient(135deg,#1b3a5c,#16324f);border:1px solid #2b5580;border-radius:16px;padding:28px;margin-bottom:30px;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+  .hero h1{color:#fff}
+  .hero .lead{color:#cfe3f7;margin:8px 0 22px}
+  .btn{display:inline-block;background:#fff;color:#12395e;font-weight:700;font-size:17px;padding:14px 26px;border-radius:10px;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+  .btn:hover{background:#eaf4ff}
+  .steps{display:grid;grid-template-columns:1fr;gap:14px}
+  .step{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+  .step .n{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:var(--accent);color:#fff;border-radius:8px;font-weight:700;margin-right:10px}
+  .code{background:#0e1117;border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-family:Consolas,monospace;font-size:13.5px;color:#d7e2f0;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
+  .tag{display:inline-block;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:700;margin-right:6px}
+  .t-ok{background:rgba(46,204,113,.15);color:var(--ok);border:1px solid rgba(46,204,113,.4)}
+  .t-warn{background:rgba(255,176,32,.15);color:var(--warn);border:1px solid rgba(255,176,32,.4)}
+  .note{background:var(--card2);border-left:4px solid var(--warn);border-radius:8px;padding:14px 18px;margin:16px 0}
+  .note.ok{border-left-color:var(--ok)}
+  .note.danger{border-left-color:var(--danger)}
+  table{width:100%;border-collapse:collapse;margin:14px 0}
+  th,td{border:1px solid var(--border);padding:10px 12px;text-align:left;font-size:14px}
+  th{background:var(--card2);color:var(--accent)}
+  .muted{color:var(--muted)}
+  a{color:var(--accent)}
+  ol,ul{padding-left:24px}
+  .kbd{background:#2b3240;border:1px solid #444d5e;border-bottom-width:2px;border-radius:5px;padding:1px 7px;font-family:Consolas,monospace;font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <h1>ZBrush 分件碰撞检测插件</h1>
+    <p class="lead">一键检查当前模型里所有子工具两两之间是否存在几何相交／穿透 —— 手办分件打印前的干涉自检。兼容 ZBrush 2022.0.5 与 2025.0.1，全中文界面。</p>
+    <a class="btn" href="../安装.bat">① 第一步：双击运行 安装.bat</a>
+  </div>
+
+  <div class="note ok">
+    <strong>这套插件解决什么问题？</strong><br>
+    分件做完后，肉眼很难发现某个部件悄悄穿进了另一个部件。本插件自动把每个子工具两两比对，凡是发生相交／穿透的，都会把它们的名字对列出来，并写入检测记录，方便你逐个修正后再去 3D 打印。
+  </div>
+
+  <h2>一、安装（只需一次）</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span><strong>先关闭 ZBrush，双击插件根目录的 安装.bat</strong><br>
+      <span class="muted"><strong>新电脑不需要装 Python。</strong>安装程序和检测引擎都已打包成 exe（ZBCollisionInstaller.exe、dist/ZBCollisionEngine）。它会把引擎装到 <span class="kbd">C:\ZBCollision</span>，并<strong>自动发现</strong>本机所有 ZBrush 安装目录（查注册表 + 扫描常见位置，要求目录里有 ZBrush.exe），把两个宏装进 <span class="kbd">ZStartup\Macros\Collision Check\</span>。拷贝整个插件文件夹到另一台电脑，双击 安装.bat 即可。</span>
+    </div>
+    <div class="step"><span class="n">2</span><strong>重启 ZBrush</strong><br>
+      <span class="muted">安装后需要重启 ZBrush，宏才会出现在菜单里。</span>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>为什么引擎要装到 C:\ZBCollision？</strong><br>
+    ZBrush 脚本调用外部程序的官方机制要求路径<strong>不含空格</strong>，所以引擎独立放在无空格目录，宏只是引用它。默认 <span class="kbd">C:\ZBCollision</span>，可用参数改：<span class="kbd">安装.bat --workdir D:\ZBCollision</span>（同样不能有空格）。<br>
+    <strong>ZBrush 装在非标准位置没被自动发现？</strong> 用 <span class="kbd">安装.bat --zbrush-path "你的ZBrush安装目录"</span> 显式指定（可重复指定多个）；或在 <span class="kbd">installer/install_config.json</span> 里写 <span class="kbd">{"zbrush_paths": ["路径"]}</span>；也可用环境变量 <span class="kbd">ZBRUSH_PATH</span>。
+  </div>
+
+  <div class="note ok">
+    <strong>安装后想先确认一切正常？</strong><br>
+    运行 <span class="kbd">python installer/自检.py</span>，它会自动检查 Python 环境、引擎文件、两版宏是否装好、版本标记是否正确，并跑一次内置几何用例。若修改了代码，先跑 <span class="kbd">python tests/回归测试.py</span>（55 项测试）确认没改坏。若实机运行出错，先跑自检能快速定位问题在哪一环。
+  </div>
+
+  <h2>二、使用（每次检测）</h2>
+  <ol>
+    <li>在 ZBrush 里打开你的模型，进入 <strong>Edit 编辑模式</strong>（按 <span class="kbd">T</span>）。</li>
+    <li>确认工具里有 2 个以上子工具（SubTool）。</li>
+    <li>打开 <strong>Macro 宏面板</strong>，找到 <strong>Collision Check</strong> 文件夹，里面有<strong>两个按钮</strong>按需选择（按钮名用英文，是为了换到非中文系统的电脑上也不会乱码；鼠标悬停有中文提示）：
+      <ul>
+        <li><strong>Quick Check（快速检测）</strong>：每对子工具只记录第一处相交点，速度最快，适合只判断"有没有相交"。</li>
+        <li><strong>Full Check（完整检测）</strong>：列出每对子工具的<strong>全部</strong>相交点与坐标，较慢，适合需要查看所有相交细节、逐个定位的情况。</li>
+      </ul>
+    </li>
+    <li>点击后，ZBrush 状态栏会实时显示"正在导出子工具 3/10"这样的进度，避免误以为卡住；导出完成后自动检测并弹窗。</li>
+    <li>稍等几秒，屏幕上会弹出一个<strong>独立的中文结果窗口</strong>，列出相交的子工具对和详细报告。完整模式下还会给出每对的全部相交点数量与坐标。结果由 Python 直接弹窗显示，不受 ZBrush 中文编码影响。</li>
+  </ol>
+
+  <h3>结果怎么看</h3>
+  <table>
+    <tr><th>提示</th><th>含义</th><th>建议</th></tr>
+    <tr><td><span class="tag t-warn">发现 N 处相交</span></td><td>列出的子工具对存在穿透／相交</td><td>按名字对逐个定位、调整位置或布尔修正</td></tr>
+    <tr><td><span class="tag t-ok">未发现任何相交</span></td><td>所有子工具彼此分离</td><td>可以进入后续打印／组装流程</td></tr>
+  </table>
+
+  <h2>三、检测记录在哪里</h2>
+  <p>每次检测都会追加一行到 <span class="kbd">C:\ZBCollision\碰撞检测记录.txt</span>，包含时间戳、ZBrush 版本、子工具数量、相交对、耗时，便于日后查证。工作目录里的 <span class="kbd">result.txt</span> 是弹窗用的简明结论，<span class="kbd">完整报告.txt</span> 是带坐标的详细报告，<span class="kbd">result.json</span> 是结构化数据。</p>
+
+  <h2>四、兼容性说明</h2>
+  <p>本插件针对两个版本的 API 差异做了分支处理：</p>
+  <ul>
+    <li><strong>导出按钮</strong>：优先用 <span class="kbd">File:Export</span>，不存在时回退到 <span class="kbd">File:Export Selected</span>。</li>
+    <li><strong>模式判断</strong>：用 <span class="kbd">IExists</span> / <span class="kbd">IGet</span> 检测按钮是否存在，两版通用。</li>
+    <li><strong>外部调用</strong>：宏逐个导出子工具后用 <span class="kbd">ShellExecute</span> 启动检测程序；检测程序立即转入后台运行，ZBrush 不会被卡住，结果由独立的中文窗口显示。</li>
+    <li><strong>导出网格（逐个导出）</strong>：用 <span class="kbd">Tool:Export</span> 把每个子工具单独导出成 <span class="kbd">sub_0.obj</span>、<span class="kbd">sub_1.obj</span>…，导出前用官方验证过的 <span class="kbd">SubToolGetStatus / SubToolSetStatus</span> 隐藏其他子工具，导出后恢复原有可见状态。<br>
+      <span class="muted">为什么逐个导出？因为 ZBrush 整体导出的 OBJ 用 <span class="kbd">g GroupNNNN</span> 标记的是多边形组（Polygroup），不是子工具名，无法可靠区分分件。逐个导出能让每个文件精确对应一个子工具。</span></li>
+    <li><strong>中文界面实现</strong>：ZScript 编译器会剥离非 ASCII 字符，因此宏源码保持纯 ASCII，中文提示在运行时用 <span class="kbd">StrFromAsc</span> 从 UTF-8 字节构造（与官方插件一致）。源码由 <span class="kbd">zscript/generate_macro.py</span> 生成，日常使用无需关心。</li>
+    <li><strong>版本标记</strong>：<span class="kbd">IConfig</span> 声明脚本所需最低版本，安装程序会按目标版本自动写入与官方一致的值（2025 版用 2025、2022 版用 2021）。</li>
+    <li><strong>检测引擎</strong>：纯 Python + NumPy，与 ZBrush 版本无关，天然跨版本。</li>
+  </ul>
+
+  <h2>五、常见问题</h2>
+  <h3>点了按钮什么窗口都没弹出？</h3>
+  <p>检查工作目录 <span class="kbd">C:\ZBCollision\</span> 下是否生成了 <span class="kbd">error.txt</span>——引擎把所有异常都写到这个文件里（因为结果窗口是无控制台运行的）。把它的内容发我即可定位。也确认该目录下有 <span class="kbd">run_detect.bat</span>，没有就重新运行安装程序。</p>
+  <h3>提示"结果不可信"？</h3>
+  <p>说明某个子工具导出失败或不完整（子工具文件序号有缺口）。请确认处于 Edit 模式、工具可导出，然后重新检测。<strong>出现此提示时不要依据结果判断为安全。</strong></p>
+  <h3>提示“OBJ 导出失败”？</h3>
+  <p>确认处于 Edit 模式，并且第一次导出时 ZBrush 弹出的 OBJ 导出选项面板点了确定。ZBrush 会记住导出设置，之后一般不再弹窗。</p>
+  <h3>提示“子工具导出失败”？</h3>
+  <p>确认处于 Edit 模式、工具是 PolyMesh3D，且工作目录 <span class="kbd">C:\ZBCollision</span> 可写。逐个导出模式下，插件会在该目录生成 <span class="kbd">sub_0.obj</span>、<span class="kbd">sub_1.obj</span>…，可据此确认导出是否成功。</p>
+  <h3>检测会不会改动我的模型？</h3>
+  <p><strong>不会。</strong>插件只做“导出 OBJ → 读取计算”，全程不修改 ZBrush 里的网格、遮罩或任何设置。</p>
+  <h3>一个大模具太多面，检测慢怎么办？</h3>
+  <p>引擎采用包围盒粗筛 + 命中即停策略，手办分件规模通常几秒内完成。如果单个部件高达数百万面，建议先用 Decimation Master 减面另存一份再检测。</p>
+
+  <div class="note danger">
+    <strong>精度提示：</strong>包含判定（一个部件完全在另一个内部）依赖网格近似封闭。若模型存在破面／开口，面面相交检测仍然可靠，但“完全包含”判定可能不准。手办分件绝大多数情况不受影响。
+  </div>
+
+  <h2>六、文件结构</h2>
+  <div class="code">ZBrush碰撞检测插件/
+├─ 安装.bat                     一键安装入口（无需 Python）
+├─ ZBCollisionInstaller.exe     打包好的安装程序（由 installer/install.py 生成）
+├─ dist/ZBCollisionEngine/      打包好的检测引擎 exe（无需 Python）
+├─ installer/install.py         安装程序源码（自动发现 ZBrush 路径）
+├─ installer/install_config.json 可选：非标准位置手动指定路径
+├─ installer/自检.py            安装自检工具（排查问题先跑它）
+├─ zscript/out/Quick Check.TXT 快速检测宏（纯 ASCII，装到两个版本）
+├─ zscript/out/Full Check.TXT  完整检测宏
+├─ zscript/generate_macro.py    宏生成器（改宏逻辑时用它重新生成）
+├─ engine/
+│   ├─ collision_engine.py    核心检测引擎（相交算法）
+│   ├─ result_window.py       中文结果窗口
+│   ├─ detect_and_show.pyw    检测+弹窗主入口
+│   ├─ run_detect.py          无界面批处理器（备用）
+│   ├─ run_detect.bat         备用启动器（无 exe 时用本机 Python）
+│   └─ launcher.pyw           独立图形界面（可选）
+├─ tests/                     测试模型与验证脚本
+│   ├─ 回归测试.py            55 项回归测试（改动后先跑它）
+│   ├─ 宏逻辑模拟.py          7 项宏链路模拟（补实机不可测维度）
+│   └─ fixtures/              5 个几何测试模型
+└─ docs/                      使用说明</div>
+
+</div>
+</body>
+</html>
