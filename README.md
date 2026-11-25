@@ -8,6 +8,8 @@
 - ✅ 两种模式：**快速检测**（只判断撞没撞，速度快）/ **完整检测**（列出每一对的全部相交点和坐标）
 - ✅ 只读检测：只导出、不修改你的模型；检测完自动恢复你原来的选中和显示状态
 
+> 觉得好用的话，点个 ⭐ Star 支持一下 · If you find it useful, please give it a ⭐ Star!
+
 ## 下载安装
 
 1. 打开 [Releases 页面](../../releases/latest)，下载 `ZBrush-Collision-Check-v*.zip` 并解压。
