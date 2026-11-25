@@ -20,13 +20,16 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 if BASE not in sys.path:
     sys.path.insert(0, BASE)
 
+import i18n
+i18n.load(BASE)
+from i18n import T, report_name, history_name
 import collision_engine as ce
 
 OBJ_PATH = os.path.join(BASE, "subtools.obj")
 RESULT_PATH = os.path.join(BASE, "result.txt")       # 供 ZBrush 读回：仅一行紧凑中文摘要
-FULLREPORT_PATH = os.path.join(BASE, "完整报告.txt")  # 完整中文报告
+FULLREPORT_PATH = os.path.join(BASE, report_name())  # 完整中文报告
 DONE_FLAG = os.path.join(BASE, "done.flag")
-HISTORY_PATH = os.path.join(BASE, "碰撞检测记录.txt")
+HISTORY_PATH = os.path.join(BASE, history_name())
 VERSION_FILE = os.path.join(BASE, "version.txt")
 
 
@@ -34,9 +37,9 @@ def read_version() -> str:
     """读取版本标识文件（安装脚本写入，便于记录）。"""
     try:
         with open(VERSION_FILE, "r", encoding="utf-8") as fh:
-            return fh.read().strip() or "未知"
+            return fh.read().strip() or T("未知", "unknown")
     except Exception:
-        return "未知"
+        return T("未知", "unknown")
 
 
 def build_note_summary(report) -> str:
@@ -65,7 +68,7 @@ def main():
     sub_files = _glob.glob(os.path.join(BASE, "sub_*.obj"))
     if not os.path.isfile(OBJ_PATH) and not sub_files:
         with open(RESULT_PATH, "w", encoding="utf-8") as fh:
-            fh.write("检测失败：未找到导出的 OBJ，请确认 ZBrush 已逐个子工具导出。")
+            fh.write(T("检测失败：未找到导出的 OBJ，请确认 ZBrush 已逐个子工具导出。", "Check failed: no exported OBJ found. Make sure ZBrush exported the SubTools one by one."))
         write_done()
         return 2
 
@@ -89,7 +92,7 @@ def main():
             json.dump(ce.report_to_dict(report), fh, ensure_ascii=False, indent=2)
     except Exception as exc:
         with open(RESULT_PATH, "w", encoding="utf-8") as fh:
-            fh.write("检测出错：%s" % exc)
+            fh.write(T("检测出错：%s", "Check error: %s") % exc)
     finally:
         write_done()
 

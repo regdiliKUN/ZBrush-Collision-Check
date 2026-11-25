@@ -26,6 +26,9 @@ else:
     if BASE not in sys.path:
         sys.path.insert(0, BASE)
 
+import i18n
+i18n.load(BASE)
+from i18n import T, report_name, history_name
 import collision_engine as ce
 import result_window
 
@@ -59,9 +62,9 @@ def read_mode():
 def read_version():
     try:
         with open(os.path.join(BASE, "version.txt"), "r", encoding="utf-8") as fh:
-            return fh.read().strip() or "未知"
+            return fh.read().strip() or T("未知", "unknown")
     except Exception:
-        return "未知"
+        return T("未知", "unknown")
 
 
 DETACH_FLAG = "--detached"
@@ -104,7 +107,7 @@ def main():
     except Exception as exc:
         try:
             with open(os.path.join(BASE, "error.txt"), "w", encoding="utf-8") as fh:
-                fh.write("检测入口异常：%s\n\n" % exc)
+                fh.write(T("检测入口异常：%s\n\n", "Startup error: %s\n\n") % exc)
                 fh.write(traceback.format_exc())
         except Exception:
             pass
@@ -114,7 +117,7 @@ def main():
             import tkinter as tk
             root = tk.Tk()
             root.withdraw()
-            mb.showerror("检测异常", "检测过程中出现异常：%s\n详情见 error.txt" % exc)
+            mb.showerror(T("检测异常", "Check error"), T("检测过程中出现异常：%s\n详情见 error.txt", "An error occurred during the check: %s\nSee error.txt for details.") % exc)
             root.destroy()
         except Exception:
             pass
@@ -141,27 +144,27 @@ def _run():
             return int(m[-1]) if m else 999999
         subs.sort(key=idx_of)
         if not subs:
-            error_text = "未找到本次导出的子工具 OBJ 文件（sub_0.obj 等）。"
+            error_text = T("未找到本次导出的子工具 OBJ 文件（sub_0.obj 等）。", "The exported SubTool OBJ files (sub_0.obj, ...) were not found.")
         else:
             report = ce.run_detection(subs[0], zbrush_version=read_version(),
                                       mode=read_mode())
     except Exception as exc:
-        error_text = "检测出错：%s" % exc
+        error_text = T("检测出错：%s", "Check error: %s") % exc
 
     if report is not None:
         with open(os.path.join(BASE, "result.txt"), "w", encoding="utf-8") as fh:
             fh.write(build_summary(report))
-        with open(os.path.join(BASE, "完整报告.txt"), "w", encoding="utf-8") as fh:
+        with open(os.path.join(BASE, report_name()), "w", encoding="utf-8") as fh:
             fh.write(ce.format_text_report(report))
         with open(os.path.join(BASE, "result.json"), "w", encoding="utf-8") as fh:
             json.dump(ce.report_to_dict(report), fh, ensure_ascii=False, indent=2)
         try:
-            ce.append_history(report, os.path.join(BASE, "碰撞检测记录.txt"))
+            ce.append_history(report, os.path.join(BASE, history_name()))
         except Exception:
             pass
     else:
         with open(os.path.join(BASE, "result.txt"), "w", encoding="utf-8") as fh:
-            fh.write(error_text or "检测失败。")
+            fh.write(error_text or T("检测失败。", "Check failed."))
 
     # 先写完成标记，再弹窗（ZBrush 轮询到标记即可继续，不必等窗口关闭）
     write_done()
@@ -174,7 +177,7 @@ def _run():
         import tkinter as tk
         root = tk.Tk()
         root.withdraw()
-        mb.showerror("检测失败", error_text or "检测失败，请查看工作目录的 result.txt")
+        mb.showerror(T("检测失败", "Check failed"), error_text or T("检测失败，请查看工作目录的 result.txt", "Check failed. See result.txt in the working directory."))
         root.destroy()
 
 

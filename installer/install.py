@@ -47,7 +47,14 @@ MACRO_FILES = ["Quick Check.TXT", "Full Check.TXT"]
 LEGACY_MACRO_FOLDER = "分件碰撞检测"          # 旧版中文名宏文件夹，安装时清理
 CONFIG_PATH = os.path.join(BASE, "installer", "install_config.json")
 
+LANG = "zh"   # 由 --lang 设置：zh（默认）/ en
+
+
+def T(zh, en):
+    return en if LANG == "en" else zh
+
 ENGINE_FILES = [
+    "i18n.py",
     "collision_engine.py",
     "result_window.py",
     "detect_and_show.pyw",
@@ -192,19 +199,19 @@ def install_engine(workdir: str):
         src = os.path.join(ENGINE_SRC, name)
         if os.path.isfile(src):
             shutil.copy2(src, os.path.join(workdir, name))
-            print("  [复制] 引擎文件：%s" % name)
+            print(T("  [复制] 引擎文件：%s", "  [copy] engine file: %s") % name)
     # 免 Python 的打包引擎（ZBrush 宏优先启动它；缺失时回退 bat + Python）
     exe_dir = os.path.join(workdir, "bin")
     if os.path.isfile(os.path.join(ENGINE_EXE_SRC, "ZBCollisionEngine.exe")):
         if os.path.isdir(exe_dir):
             shutil.rmtree(exe_dir, ignore_errors=True)
         shutil.copytree(ENGINE_EXE_SRC, exe_dir)
-        print("  [复制] 免 Python 引擎：bin/ZBCollisionEngine.exe")
+        print(T("  [复制] 免 Python 引擎：bin/ZBCollisionEngine.exe", "  [copy] standalone engine (no Python needed): bin/ZBCollisionEngine.exe"))
     else:
-        print("  [提示] 未找到打包引擎 dist/ZBCollisionEngine，将依赖本机 Python 3 运行。")
+        print(T("  [提示] 未找到打包引擎 dist/ZBCollisionEngine，将依赖本机 Python 3 运行。", "  [note] packaged engine dist/ZBCollisionEngine not found; Python 3 on this PC will be used."))
     ensure_dir(os.path.join(workdir, "导出数据"))
     with open(os.path.join(workdir, "version.txt"), "w", encoding="utf-8") as fh:
-        fh.write("多版本通用（2022.0.5 / 2025.0.1）")
+        fh.write(T("多版本通用（2022.0.5 / 2025.0.1）", "multi-version (2022.0.5 / 2025.0.1)"))
     # 静态中文错误说明页：bat 找不到 Python 时用 start 打开它，
     # 让用户一定能看到明确提示（bat 本身不能可靠写中文）。
     help_page = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
@@ -219,40 +226,56 @@ def install_engine(workdir: str):
 </ol>
 <p style="color:#555">如果不确定是否装好，打开命令行输入 <code>py --version</code> 能看到版本号即可。</p>
 </body></html>"""
+    if LANG == "en":
+        help_page = """<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>Check failed: Python not found</title></head>
+<body style="font-family:Segoe UI,sans-serif;padding:28px">
+<h2 style="color:#C0392B">Check failed: Python 3 not found</h2>
+<p>The collision check engine needs Python 3, but it was not found on this PC.</p>
+<p><b>How to fix:</b></p>
+<ol>
+<li>Install Python 3 from python.org and tick "Add Python to PATH" during setup.</li>
+<li>Then click the check button in ZBrush again. No need to reinstall this plugin.</li>
+</ol>
+<p style="color:#555">To confirm, open a command prompt and run <code>py --version</code>; it should print a version number.</p>
+</body></html>"""
     with open(os.path.join(workdir, "help_no_python.html"),
               "w", encoding="utf-8") as fh:
         fh.write(help_page)
+    # 界面语言：引擎（i18n.py）从这里读取
+    with open(os.path.join(workdir, "lang.txt"), "w", encoding="ascii") as fh:
+        fh.write(LANG)
     # 默认检测模式：first=快速（每对首个相交点）；用户可改为 all=完整
     mode_path = os.path.join(workdir, "mode.txt")
     if not os.path.isfile(mode_path):
         with open(mode_path, "w", encoding="ascii") as fh:
             fh.write("first")
-    print("  [完成] 引擎工作目录：%s" % workdir)
+    print(T("  [完成] 引擎工作目录：%s", "  [done] engine working folder: %s") % workdir)
 
 
 def install_macro(zb_path: str, version_label: str):
     """把一个 ZBrush 版本的宏安装到位。"""
     macro_root = os.path.join(zb_path, "ZStartup", "Macros")
     if not os.path.isdir(zb_path):
-        print("  [跳过] 未找到 ZBrush 安装目录：%s" % zb_path)
+        print(T("  [跳过] 未找到 ZBrush 安装目录：%s", "  [skip] ZBrush folder not found: %s") % zb_path)
         return False
     legacy = os.path.join(macro_root, LEGACY_MACRO_FOLDER)
     if os.path.isdir(legacy):
         shutil.rmtree(legacy, ignore_errors=True)
-        print("  [清理] 旧版宏文件夹：%s" % legacy)
+        print(T("  [清理] 旧版宏文件夹：%s", "  [clean] old macro folder: %s") % legacy)
     target_dir = os.path.join(macro_root, MACRO_FOLDER)
     ensure_dir(target_dir)
     for name in MACRO_FILES:
-        src = os.path.join(MACRO_SRC_DIR, name)
+        src = os.path.join(MACRO_SRC_DIR, "en", name) if LANG == "en" else os.path.join(MACRO_SRC_DIR, name)
         if not os.path.isfile(src):
-            raise SystemExit("缺少宏源文件：%s（先运行 zscript/generate_macro.py）" % src)
+            raise SystemExit(T("缺少宏源文件：%s（先运行 zscript/generate_macro.py）", "Macro source missing: %s (run zscript/generate_macro.py first)") % src)
         target = os.path.join(target_dir, name)
         shutil.copy2(src, target)
         # 删除旧的编译缓存，确保 ZBrush 重新编译最新宏
         zsc = os.path.splitext(target)[0] + ".zsc"
         if os.path.isfile(zsc):
             os.remove(zsc)
-        print("  [安装] %s -> %s" % (version_label, target))
+        print(T("  [安装] %s -> %s", "  [install] %s -> %s") % (version_label, target))
     return True
 
 
@@ -290,7 +313,7 @@ def _patch_one(target: str, workdir: str, label: str, zb_path: str):
     # 以 utf-8（无 BOM）写回，保证宏源码保持纯 ASCII（ZScript 编译器限制）
     with open(target, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(lines) + "\n")
-    print("    [版本适配] %s -> IConfig %s, 工作目录 %s（%s）"
+    print(T("    [版本适配] %s -> IConfig %s, 工作目录 %s（%s）", "    [version] %s -> IConfig %s, working folder %s (%s)")
           % (label, icfg, normalized, os.path.basename(target)))
 
 
@@ -306,28 +329,32 @@ def main(argv=None):
                         help="ZBrush 安装根目录，可重复指定；不指定则自动发现")
     parser.add_argument("--config", default=CONFIG_PATH,
                         help="含 zbrush_paths 数组的 JSON 配置文件路径")
+    parser.add_argument("--lang", choices=("zh", "en"), default="zh",
+                        help="界面语言 / interface language: zh (default) or en")
     args = parser.parse_args(argv)
+    global LANG
+    LANG = args.lang
 
     print("=" * 56)
-    print("ZBrush 分件碰撞检测插件 —— 安装程序")
+    print(T("ZBrush 分件碰撞检测插件 —— 安装程序", "ZBrush SubTool Collision Check - Installer"))
     print("=" * 56)
 
     if detect_workdir_has_space(args.workdir):
-        print("[错误] 工作目录不能包含空格：%s" % args.workdir)
-        print("       请使用类似 C:\\ZBCollision 的纯英文无空格路径。")
+        print(T("[错误] 工作目录不能包含空格：%s", "[error] the working folder must not contain spaces: %s") % args.workdir)
+        print(T("       请使用类似 C:\\ZBCollision 的纯英文无空格路径。", "       Use an ASCII path without spaces, such as C:\\ZBCollision."))
         return 2
 
-    print("\n[1/3] 安装检测引擎...")
+    print(T("\n[1/3] 安装检测引擎...", "\n[1/3] Installing the check engine..."))
     install_engine(args.workdir)
 
-    print("\n[2/3] 发现并安装 ZBrush 宏...")
+    print(T("\n[2/3] 发现并安装 ZBrush 宏...", "\n[2/3] Finding ZBrush and installing the macros..."))
     zb_paths = discover_zbrush_paths(args.zbrush_path, args.config)
     if zb_paths:
-        print("  发现 %d 个 ZBrush 安装：" % len(zb_paths))
+        print(T("  发现 %d 个 ZBrush 安装：", "  Found %d ZBrush install(s):") % len(zb_paths))
         for label, path in zb_paths:
             print("    - %s : %s" % (label, path))
     else:
-        print("  未自动发现 ZBrush 安装目录。")
+        print(T("  未自动发现 ZBrush 安装目录。", "  No ZBrush install found automatically."))
 
     installed = 0
     for label, path in zb_paths:
@@ -335,17 +362,17 @@ def main(argv=None):
             patch_macro_for_version(path, args.workdir, label)
             installed += 1
 
-    print("\n[3/3] 完成")
+    print(T("\n[3/3] 完成", "\n[3/3] Done"))
     if installed == 0:
-        print("[警告] 没有检测到任何 ZBrush 安装目录，仅安装了引擎。")
-        print("       请用以下任一方式指定 ZBrush 安装根目录后重跑：")
+        print(T("[警告] 没有检测到任何 ZBrush 安装目录，仅安装了引擎。", "[warning] no ZBrush install found; only the engine was installed."))
+        print(T("       请用以下任一方式指定 ZBrush 安装根目录后重跑：", "       Point to the ZBrush install folder in one of these ways and run again:"))
         print("         python install.py --zbrush-path \"D:\\...\\ZBrush 2025\"")
-        print("         或创建 installer/install_config.json：")
+        print(T("         或创建 installer/install_config.json：", "         or create installer/install_config.json:"))
         print('           {"zbrush_paths": ["D:\\\\...\\\\ZBrush 2025"]}')
     else:
-        print("已安装到 %d 个 ZBrush 版本。" % installed)
-    print("\n使用方法：重启 ZBrush -> Macro 面板 -> Collision Check -> Quick Check（快速）/ Full Check（完整）")
-    print("详细中文说明见 docs/使用说明.html")
+        print(T("已安装到 %d 个 ZBrush 版本。", "Installed into %d ZBrush version(s).") % installed)
+    print(T("\n使用方法：重启 ZBrush -> Macro 面板 -> Collision Check -> Quick Check（快速）/ Full Check（完整）", "\nUsage: restart ZBrush -> Macro palette -> Collision Check -> Quick Check / Full Check"))
+    print(T("详细中文说明见 docs/使用说明.html", "See the README on GitHub for details."))
     return 0
 
 
@@ -355,7 +382,7 @@ if __name__ == "__main__":
         # 双击 exe 运行时窗口会立刻关闭，停一下让用户看到结果
         try:
             print()
-            input("按回车键关闭窗口...")
+            input(T("按回车键关闭窗口...", "Press Enter to close..."))
         except Exception:
             pass
     sys.exit(code)
