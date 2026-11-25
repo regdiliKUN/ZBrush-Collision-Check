@@ -50,6 +50,19 @@ S = {
     "note_launched": "检测已启动，中文结果窗口即将弹出，请稍候。",
 }
 
+# 英文界面版（python zscript/generate_macro.py --lang en -> zscript/out/en/）
+S_EN = {
+    "note_edit": "Enter Edit mode first (press T), then run the collision check.",
+    "note_few": "This tool has fewer than 2 SubTools, so there is nothing to check.",
+    "note_okbtn": "OK",
+    "note_noexe": "Check program not found: ",
+    "note_noexe2": "\nPlease run the installer again (Install-EN.bat). Working folder: ",
+    "note_exportfail": "SubTool export failed. Make sure you are in Edit mode and the tool can be exported.",
+    "progress": "Exporting SubTool ",
+    "progress_done": "Export finished, checking for intersections...",
+    "note_launched": "Check started. The result window will appear shortly.",
+}
+
 
 def cn_lines(var: str, text: str):
     """把中文串拆成多行 VarSet，每个 StrMerge 不超过 10 个参数。"""
@@ -64,7 +77,8 @@ def cn_lines(var: str, text: str):
     return out
 
 
-def build(mode: str, tip_cn: str, tip_en: str) -> str:
+def build(mode: str, tip_cn: str, tip_en: str, lang: str = "zh") -> str:
+    strings = S_EN if lang == "en" else S
     L = []
     a = L.append
     a("// ZBrush SubTool collision check (%s mode) - PURE ASCII source." % mode)
@@ -87,14 +101,15 @@ def build(mode: str, tip_cn: str, tip_en: str) -> str:
     a("")
     a("// Tooltip: English default, replaced by Chinese at load time.")
     a('[VarDef,s_tip,"%s"]' % tip_en)
-    L.extend(cn_lines("s_tip", tip_cn))
-    for key in S:
+    if lang != "en":
+        L.extend(cn_lines("s_tip", tip_cn))
+    for key in strings:
         a('[VarDef,s_%s,""]' % key)
     a("")
     a("// Chinese runtime strings are (re)built on every press, so they are valid")
     a("// even if top-level statements were skipped at load time.")
     a("[RoutineDef,InitStrings,")
-    for key, text in S.items():
+    for key, text in strings.items():
         for line in cn_lines("s_" + key, text):
             a("  " + line)
     a("]")
@@ -233,11 +248,15 @@ def build(mode: str, tip_cn: str, tip_en: str) -> str:
     return content
 
 
-def main():
-    os.makedirs(OUT_DIR, exist_ok=True)
+def main(argv=None):
+    import sys
+    argv = sys.argv[1:] if argv is None else argv
+    lang = "en" if "--lang" in argv and argv[argv.index("--lang") + 1:][:1] == ["en"] else "zh"
+    out_dir = os.path.join(OUT_DIR, "en") if lang == "en" else OUT_DIR
+    os.makedirs(out_dir, exist_ok=True)
     for fname, mode, tip_cn, tip_en in MACROS:
-        path = os.path.join(OUT_DIR, fname)
-        content = build(mode, tip_cn, tip_en)
+        path = os.path.join(out_dir, fname)
+        content = build(mode, tip_cn, tip_en, lang)
         with open(path, "w", encoding="ascii", newline="\n") as fh:
             fh.write(content)
         print("已生成纯 ASCII 宏：%s（%d 字节）" % (path, len(content)))

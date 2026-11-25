@@ -25,6 +25,7 @@ import shutil
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ENGINE = os.path.join(BASE, "engine")
 sys.path.insert(0, ENGINE)
+os.environ["ZBC_LANG"] = "zh"   # 本套件断言中文文案；英文界面见 英文模式测试.py
 
 import collision_engine as ce
 

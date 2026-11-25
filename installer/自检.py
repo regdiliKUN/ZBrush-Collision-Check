@@ -39,7 +39,7 @@ try:
 except Exception:
     def _discover_zb():
         return []
-ENGINE_FILES = ["collision_engine.py", "result_window.py", "detect_and_show.pyw",
+ENGINE_FILES = ["i18n.py", "collision_engine.py", "result_window.py", "detect_and_show.pyw",
                 "run_detect.py", "run_detect.bat", "launcher.pyw",
                 "bin/ZBCollisionEngine.exe"]
 

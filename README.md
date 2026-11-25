@@ -48,10 +48,17 @@ ZBrush 的脚本拿不到网格的三角面数据，所以插件分两步走：
 installer\build_exe.bat          重新生成宏、打包检测引擎与安装程序
 py -3 tests\回归测试.py           回归测试
 py -3 tests\宏逻辑模拟.py         宏流程模拟
+py -3 tests\英文模式测试.py       英文界面回归测试
 py -3 installer\自检.py           安装后自检
 ```
 
 目录：`engine/` 检测引擎 · `zscript/` 宏生成器与生成的宏 · `installer/` 安装程序 · `tests/` 测试 · `docs/使用说明.html` 图文说明。
+
+## English
+
+An English interface is available (macro messages, result window, report and log). Install it with **`Install-EN.bat`** instead of `安装.bat` (or run the installer with `--lang en`). Everything else is the same: close ZBrush, run the installer, reopen ZBrush, then use **Macro > Collision Check > Quick Check / Full Check**. Results are saved to `C:\ZBCollisioneport.txt` and `collision_log.txt`.
+
+The English build has passed the automated tests but has not yet been tried inside ZBrush; please report anything odd in Issues.
 
 ## 许可
 

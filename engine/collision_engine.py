@@ -38,6 +38,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Optional, Sequence, Tuple
 
+from i18n import T
+
 try:
     import numpy as np
     _HAS_NUMPY = True
@@ -102,7 +104,7 @@ class Report:
     """整次检测的汇总结果。"""
     obj_path: str
     timestamp: str
-    zbrush_version: str = "未知"
+    zbrush_version: str = T("未知", "unknown")
     subtools: List[str] = field(default_factory=list)
     pairs: List[PairResult] = field(default_factory=list)
     elapsed_sec: float = 0.0
@@ -158,7 +160,7 @@ def parse_obj(path: str, merge_all: bool = False) -> Tuple[List[SubToolMesh], Li
     返回 (subtools, warnings)
     """
     if not os.path.isfile(path):
-        raise FileNotFoundError("找不到 OBJ 文件：%s" % path)
+        raise FileNotFoundError(T("找不到 OBJ 文件：%s", "OBJ file not found: %s") % path)
 
     subtools: List[SubToolMesh] = []
     warnings: List[str] = []
@@ -167,7 +169,7 @@ def parse_obj(path: str, merge_all: bool = False) -> Tuple[List[SubToolMesh], Li
 
     if merge_all:
         # 快速路径：所有面归一组，不解析 g/o，避免逐组处理开销
-        current = SubToolMesh(name="合并网格")
+        current = SubToolMesh(name=T("合并网格", "Merged mesh"))
         subtools.append(current)
 
     def ensure_group(name: str) -> SubToolMesh:
@@ -202,19 +204,19 @@ def parse_obj(path: str, merge_all: bool = False) -> Tuple[List[SubToolMesh], Li
                     all_vertices.append((float(parts[1]), float(parts[2]),
                                          float(parts[3])))
                 except (ValueError, IndexError):
-                    warnings.append("第 %d 行顶点格式无效，已跳过。" % lineno)
+                    warnings.append(T("第 %d 行顶点格式无效，已跳过。", "Line %d: invalid vertex, skipped.") % lineno)
 
             elif tag == "g" or tag == "o":
                 if merge_all:
                     continue  # 忽略 Polygroup 分组
                 name = " ".join(parts[1:]).strip()
                 if not name or name in ("default", "Default"):
-                    name = "未命名子工具_%d" % (len(subtools) + 1)
+                    name = T("未命名子工具_%d", "Unnamed SubTool_%d") % (len(subtools) + 1)
                 ensure_group(name)
 
             elif tag == "f":
                 if current is None:
-                    ensure_group("未命名子工具_%d" % (len(subtools) + 1))
+                    ensure_group(T("未命名子工具_%d", "Unnamed SubTool_%d") % (len(subtools) + 1))
                 idx_raw = parts[1:]
                 idx: List[int] = []
                 for tok in idx_raw:
@@ -233,7 +235,7 @@ def parse_obj(path: str, merge_all: bool = False) -> Tuple[List[SubToolMesh], Li
                         idx.append(iv - 1)
                     else:
                         warnings.append(
-                            "第 %d 行的面引用了不存在的顶点 %d，已忽略该角。"
+                            T("第 %d 行的面引用了不存在的顶点 %d，已忽略该角。", "Line %d: a face uses vertex %d, which does not exist; that corner was ignored.")
                             % (lineno, iv)
                         )
                 # 扇形三角化；过滤索引重复与共线退化面
@@ -245,8 +247,8 @@ def parse_obj(path: str, merge_all: bool = False) -> Tuple[List[SubToolMesh], Li
                         current.faces.append((a, b, c))
 
     if not subtools:
-        warnings.append("OBJ 中没有找到任何分组（g/o），已将全部面视为单个子工具。")
-        st = SubToolMesh(name="未命名子工具")
+        warnings.append(T("OBJ 中没有找到任何分组（g/o），已将全部面视为单个子工具。", "No groups (g/o) found in the OBJ; all faces are treated as one SubTool."))
+        st = SubToolMesh(name=T("未命名子工具", "Unnamed SubTool"))
         st.vertices = list(all_vertices)
         subtools.append(st)
 
@@ -254,7 +256,7 @@ def parse_obj(path: str, merge_all: bool = False) -> Tuple[List[SubToolMesh], Li
     result: List[SubToolMesh] = []
     for st in subtools:
         if not st.faces:
-            warnings.append('子工具"%s"没有任何有效三角面，已跳过。' % st.name)
+            warnings.append(T('子工具"%s"没有任何有效三角面，已跳过。', 'SubTool "%s" has no valid triangles, skipped.') % st.name)
             continue
         used = sorted({i for f in st.faces for i in f})
         remap = {old: new for new, old in enumerate(used)}
@@ -263,7 +265,7 @@ def parse_obj(path: str, merge_all: bool = False) -> Tuple[List[SubToolMesh], Li
         result.append(st)
 
     if not result:
-        raise ValueError("OBJ 中没有可用于检测的有效三角面。")
+        raise ValueError(T("OBJ 中没有可用于检测的有效三角面。", "The OBJ has no valid triangles to check."))
 
     return result, warnings
 
@@ -323,13 +325,13 @@ def parse_obj_multi(directory: str, prefix: str = "sub_",
             # 快速路径：一个 sub_i.obj 文件就是一个子工具，内部 Polygroup 全部合并
             parts, w = parse_obj(path, merge_all=True)
         except Exception as exc:
-            warnings.append("读取 %s 失败：%s" % (os.path.basename(path), exc))
+            warnings.append(T("读取 %s 失败：%s", "Failed to read %s: %s") % (os.path.basename(path), exc))
             continue
         if not parts or not parts[0].faces:
-            warnings.append("子工具文件 %s 没有有效面，可能导出失败，已跳过。"
+            warnings.append(T("子工具文件 %s 没有有效面，可能导出失败，已跳过。", "SubTool file %s has no valid faces (export may have failed); skipped.")
                             % os.path.basename(path))
             continue
-        nm = names[idx] if idx < len(names) else ("子工具 %d" % (file_idx + 1))
+        nm = names[idx] if idx < len(names) else (T("子工具 %d", "SubTool %d") % (file_idx + 1))
         mesh = parts[0]
         mesh.name = nm
         subtools.append(mesh)
@@ -340,7 +342,7 @@ def parse_obj_multi(directory: str, prefix: str = "sub_",
         full = set(range(min(valid_indices), max(valid_indices) + 1))
         gaps = sorted(full - set(valid_indices))
         if gaps:
-            warnings.append("以下子工具文件缺失，可能导出失败：%s。检测结果可能不完整。"
+            warnings.append(T("以下子工具文件缺失，可能导出失败：%s。检测结果可能不完整。", "These SubTool files are missing (export may have failed): %s. The result may be incomplete.")
                             % ", ".join("sub_%d.obj" % g for g in gaps))
 
     return subtools, warnings
@@ -808,7 +810,7 @@ def detect_pair(st_a: SubToolMesh, st_b: SubToolMesh,
 # 主流程
 # ---------------------------------------------------------------------------
 
-def run_detection(obj_path: str, zbrush_version: str = "未知",
+def run_detection(obj_path: str, zbrush_version: str = T("未知", "unknown"),
                   progress_callback=None, mode: str = "first") -> Report:
     """对 OBJ 中所有 SubTool 两两检测，返回汇总报告。
 
@@ -830,7 +832,7 @@ def run_detection(obj_path: str, zbrush_version: str = "未知",
     multi_subs, multi_warn = parse_obj_multi(work_dir, "sub_", manifest)
     if len(multi_subs) >= 2:
         subtools, warnings = multi_subs, multi_warn
-        report.obj_path = work_dir + " (逐个导出模式，%d 个子工具)" % len(multi_subs)
+        report.obj_path = work_dir + T(" (逐个导出模式，%d 个子工具)", " (per-SubTool export, %d SubTools)") % len(multi_subs)
     else:
         # 边界：目录里确有 sub_*.obj 但有效数不足（导出失败/count 写错/残留），
         # 此时静默回退会把某个残片当唯一子工具，得出误导性的"无相交"。
@@ -840,8 +842,7 @@ def run_detection(obj_path: str, zbrush_version: str = "未知",
         if sub_files:
             subtools, warnings = fallback
             warnings.insert(0, (
-                "注意：发现 %d 个 sub 导出文件，但仅 %d 个有效（应为连续编号），"
-                "导出可能不完整（缺失或失败）；本次结果不可信，请重新检测。" % (
+                T("注意：发现 %d 个 sub 导出文件，但仅 %d 个有效（应为连续编号），导出可能不完整（缺失或失败）；本次结果不可信，请重新检测。", "Note: found %d sub export files but only %d are valid (they should be numbered consecutively). The export may be incomplete (missing or failed); this result is unreliable, please check again.") % (
                     len(sub_files), len(multi_subs))))
         else:
             subtools, warnings = fallback
@@ -852,11 +853,9 @@ def run_detection(obj_path: str, zbrush_version: str = "未知",
     # 关键防护：若只解析出 1 个"未命名"子工具，极可能是 ZBrush 把所有
     # SubTool 合并导出到一个 group，此时两两检测会失效，必须显式警告，
     # 避免用户误以为"没有相交"而直接去打印。
-    if len(subtools) == 1 and subtools[0].name.startswith("未命名子工具"):
+    if len(subtools) == 1 and subtools[0].name.startswith(T("未命名子工具", "Unnamed SubTool")):
         report.warnings.append(
-            "注意：OBJ 中未检测到子工具分组，可能被合并导出为单个对象，"
-            "此时无法区分各个子工具。请在 ZBrush 导出前确认按 SubTool 分组，"
-            "或改用逐个导出。本次结果不能作为无相交的依据。"
+            T("注意：OBJ 中未检测到子工具分组，可能被合并导出为单个对象，此时无法区分各个子工具。请在 ZBrush 导出前确认按 SubTool 分组，或改用逐个导出。本次结果不能作为无相交的依据。", "Note: no SubTool groups found in the OBJ; it may have been exported merged into one object, so SubTools cannot be told apart. Group by SubTool before exporting, or export one by one. This result is not proof that nothing intersects.")
         )
 
     total = len(subtools)
@@ -886,67 +885,69 @@ def format_summary(report: Report) -> str:
     导出不完整时把"不可信"置于开头，避免用户只看首屏误判为安全。
     """
     hits = report.intersecting_pairs
+    # 同时认中英文措辞（英文界面下警告是英文）
     incomplete = any(("缺失" in w) or ("没有有效面" in w) or ("合并导出" in w)
                      or ("不可信" in w)
+                     or ("missing" in w) or ("no valid faces" in w)
+                     or ("merged into one object" in w) or ("unreliable" in w)
                      for w in report.warnings)
     if incomplete:
-        text = "【重要】部分子工具导出不完整，本次结果不可信！详情见 完整报告.txt"
+        text = T("【重要】部分子工具导出不完整，本次结果不可信！详情见 完整报告.txt", "[IMPORTANT] Some SubTools were not exported completely, so this result is unreliable! See report.txt for details.")
     elif hits:
-        pairs = ["「%s」与「%s」" % (p.name_a, p.name_b) for p in hits]
-        detail = "；".join(pairs)
+        pairs = [T("「%s」与「%s」", '"%s" and "%s"') % (p.name_a, p.name_b) for p in hits]
+        detail = T("；", "; ").join(pairs)
         if len(detail) > 240:
             detail = detail[:240] + "…"
-        text = "【检测结果】发现 %d 处相交：%s。详情见 完整报告.txt" % (len(hits), detail)
+        text = T("【检测结果】发现 %d 处相交：%s。详情见 完整报告.txt", "[Result] Found %d intersection(s): %s. See report.txt for details.") % (len(hits), detail)
     else:
-        text = ("【检测结果】未发现任何相交，所有 %d 个子工具彼此分离。"
-                "详情见 完整报告.txt" % len(report.subtools))
+        text = (T("【检测结果】未发现任何相交，所有 %d 个子工具彼此分离。详情见 完整报告.txt", "[Result] No intersections found; all %d SubTools are separate. See report.txt for details.") % len(report.subtools))
     return text.replace("\n", " ").replace("\r", " ").replace("\t", " ")
 
 
 def format_text_report(report: Report) -> str:
     lines: List[str] = []
     lines.append("=" * 56)
-    lines.append("ZBrush 分件碰撞检测报告")
+    lines.append(T("ZBrush 分件碰撞检测报告", "ZBrush SubTool Collision Check Report"))
     lines.append("=" * 56)
-    lines.append("检测时间：%s" % report.timestamp)
-    lines.append("ZBrush 版本：%s" % report.zbrush_version)
-    lines.append("输入文件：%s" % report.obj_path)
-    lines.append("子工具数量：%d" % len(report.subtools))
-    lines.append("检测配对数：%d" % report.pair_count)
-    lines.append("耗时：%.2f 秒" % report.elapsed_sec)
-    lines.append("检测模式：%s" % ("完整模式（列出全部相交点）"
-                                  if report.mode == "all" else "快速模式（每对仅首个相交点）"))
-    lines.append("计算后端：%s" % ("NumPy 加速" if report.has_numpy else "纯 Python"))
+    lines.append(T("检测时间：%s", "Checked at: %s") % report.timestamp)
+    lines.append(T("ZBrush 版本：%s", "ZBrush version: %s") % report.zbrush_version)
+    lines.append(T("输入文件：%s", "Input: %s") % report.obj_path)
+    lines.append(T("子工具数量：%d", "SubTools: %d") % len(report.subtools))
+    lines.append(T("检测配对数：%d", "Pairs checked: %d") % report.pair_count)
+    lines.append(T("耗时：%.2f 秒", "Time: %.2f s") % report.elapsed_sec)
+    lines.append(T("检测模式：%s", "Mode: %s") % (T("完整模式（列出全部相交点）", "Full (all intersection points)")
+                                  if report.mode == "all" else T("快速模式（每对仅首个相交点）", "Quick (first intersection point per pair)")))
+    lines.append(T("计算后端：%s", "Backend: %s") % (T("NumPy 加速", "NumPy accelerated") if report.has_numpy else T("纯 Python", "pure Python")))
     lines.append("-" * 56)
-    lines.append("子工具清单：")
+    lines.append(T("子工具清单：", "SubTools:"))
     for idx, name in enumerate(report.subtools, 1):
         lines.append("  %d. %s" % (idx, name))
     lines.append("-" * 56)
 
     hits = report.intersecting_pairs
     if hits:
-        lines.append("【检测结果】发现 %d 对子工具相交：" % len(hits))
+        lines.append(T("【检测结果】发现 %d 对子工具相交：", "[Result] %d SubTool pair(s) intersect:") % len(hits))
         for n, pair in enumerate(hits, 1):
-            lines.append("  %d. 「%s」  <->  「%s」" % (
+            lines.append(T("  %d. 「%s」  <->  「%s」", '  %d. "%s"  <->  "%s"') % (
                 n, pair.name_a, pair.name_b))
             if report.mode == "all" and pair.all_hits:
                 # 完整模式：列出该对的全部相交点（含上限截断说明）
-                lines.append("     相交点数：%d%s" % (
-                    pair.total_hits, "（列表已截断）" if pair.hits_truncated else ""))
+                lines.append(T("     相交点数：%d%s", "     Intersection points: %d%s") % (
+                    pair.total_hits, T("（列表已截断）", " (list truncated)") if pair.hits_truncated else ""))
                 for k, info in enumerate(pair.all_hits, 1):
                     px, py, pz = info.contact_point
-                    lines.append("       #%d 面#%d×#%d 坐标(%.4f, %.4f, %.4f)" % (
+                    lines.append(T("       #%d 面#%d×#%d 坐标(%.4f, %.4f, %.4f)", "       #%d faces #%d x #%d at (%.4f, %.4f, %.4f)") % (
                         k, info.face_a, info.face_b, px, py, pz))
             elif pair.hit:
                 px, py, pz = pair.hit.contact_point
-                lines.append("     相交面：#%d 与 #%d；参考坐标：(%.4f, %.4f, %.4f)" % (
+                lines.append(T("     相交面：#%d 与 #%d；参考坐标：(%.4f, %.4f, %.4f)", "     Faces #%d and #%d; reference point: (%.4f, %.4f, %.4f)") % (
                     pair.hit.face_a, pair.hit.face_b, px, py, pz))
     else:
-        lines.append("【检测结果】未发现任何相交。所有子工具彼此分离。")
+        lines.append(T("【检测结果】未发现任何相交。所有子工具彼此分离。", "[Result] No intersections found. All SubTools are separate."))
 
     if report.warnings:
         lines.append("-" * 56)
-        lines.append("提示：")
+        lines.append(T("提示：", "Notes:"))
         for w in report.warnings:
             lines.append("  - %s" % w)
 
@@ -993,12 +994,12 @@ def append_history(report: Report, history_path: str):
     os.makedirs(os.path.dirname(os.path.abspath(history_path)), exist_ok=True)
     hits = report.intersecting_pairs
     if hits:
-        summary = "；".join("「%s」×「%s」" % (p.name_a, p.name_b) for p in hits)
-        verdict = "发现 %d 处相交：%s" % (len(hits), summary)
+        summary = T("；", "; ").join(T("「%s」×「%s」", '"%s" x "%s"') % (p.name_a, p.name_b) for p in hits)
+        verdict = T("发现 %d 处相交：%s", "%d intersection(s): %s") % (len(hits), summary)
     else:
-        verdict = "未发现相交"
+        verdict = T("未发现相交", "no intersections")
     entry = (
-        "[%s] 版本=%s | 子工具=%d | 配对=%d | %s | 耗时=%.2fs | 文件=%s\n"
+        T("[%s] 版本=%s | 子工具=%d | 配对=%d | %s | 耗时=%.2fs | 文件=%s\n", "[%s] version=%s | SubTools=%d | pairs=%d | %s | time=%.2fs | file=%s\n")
         % (
             report.timestamp, report.zbrush_version, len(report.subtools),
             report.pair_count, verdict, report.elapsed_sec,
@@ -1008,7 +1009,7 @@ def append_history(report: Report, history_path: str):
     is_new = not os.path.exists(history_path)
     with open(history_path, "a", encoding="utf-8") as fh:
         if is_new:
-            fh.write("ZBrush 分件碰撞检测记录（每次检测追加一行）\n")
+            fh.write(T("ZBrush 分件碰撞检测记录（每次检测追加一行）\n", "ZBrush SubTool collision check log (one line per check)\n"))
             fh.write("=" * 56 + "\n")
         fh.write(entry)
 
@@ -1022,14 +1023,14 @@ def main(argv=None):
     parser.add_argument("--obj", required=True, help="ZBrush 导出的 OBJ 文件路径")
     parser.add_argument("--out-dir", default=None, help="输出目录（默认与 OBJ 同目录）")
     parser.add_argument("--json", default=None, help="结果 JSON 路径")
-    parser.add_argument("--version", default="未知", help="ZBrush 版本标识")
+    parser.add_argument("--version", default=T("未知", "unknown"), help="ZBrush 版本标识")
     parser.add_argument("--history", default=None, help="检测记录文件路径")
     parser.add_argument("--mode", choices=("first", "all"), default="first",
                         help="first=快速(每对首个相交点)；all=完整(列出全部)")
     args = parser.parse_args(argv)
 
     if not os.path.isfile(args.obj):
-        print("错误：找不到 OBJ 文件：%s" % args.obj, file=sys.stderr)
+        print(T("错误：找不到 OBJ 文件：%s", "Error: OBJ file not found: %s") % args.obj, file=sys.stderr)
         return 2
 
     out_dir = args.out_dir or os.path.dirname(os.path.abspath(args.obj))
@@ -1037,29 +1038,29 @@ def main(argv=None):
 
     def progress(done, total, pair):
         if total and (done % max(1, total // 20) == 0 or done == total):
-            print("检测进度：%d/%d" % (done, total))
+            print(T("检测进度：%d/%d", "Progress: %d/%d") % (done, total))
 
     report = run_detection(args.obj, zbrush_version=args.version,
                            progress_callback=progress, mode=args.mode)
 
     # 文本报告
-    report_path = os.path.join(out_dir, "碰撞检测结果.txt")
+    report_path = os.path.join(out_dir, T("碰撞检测结果.txt", "collision_result.txt"))
     with open(report_path, "w", encoding="utf-8") as fh:
         fh.write(format_text_report(report))
 
     # JSON 结果
-    json_path = args.json or os.path.join(out_dir, "碰撞检测结果.json")
+    json_path = args.json or os.path.join(out_dir, T("碰撞检测结果.json", "collision_result.json"))
     with open(json_path, "w", encoding="utf-8") as fh:
         json.dump(report_to_dict(report), fh, ensure_ascii=False, indent=2)
 
     # 持久化记录
-    history_path = args.history or os.path.join(out_dir, "碰撞检测记录.txt")
+    history_path = args.history or os.path.join(out_dir, history_name())
     append_history(report, history_path)
 
     print(format_text_report(report))
-    print("\n[完成] 结果文件：%s" % report_path)
-    print("[完成] 结果数据：%s" % json_path)
-    print("[完成] 检测记录：%s" % history_path)
+    print(T("\n[完成] 结果文件：%s", "\n[Done] Report: %s") % report_path)
+    print(T("[完成] 结果数据：%s", "[Done] Data: %s") % json_path)
+    print(T("[完成] 检测记录：%s", "[Done] Log: %s") % history_path)
     return 0
 
 

@@ -27,11 +27,14 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 if BASE not in sys.path:
     sys.path.insert(0, BASE)
 
+import i18n
+i18n.load(BASE)
+from i18n import T, report_name, history_name
 import collision_engine as ce
 
 EXPORT_DIR = os.path.join(BASE, "导出数据")
 DEFAULT_OBJ = os.path.join(EXPORT_DIR, "当前检测.obj")
-HISTORY = os.path.join(BASE, "碰撞检测记录.txt")
+HISTORY = os.path.join(BASE, history_name())
 
 
 def wait_for_stable_file(path: str, timeout: float = 20.0, stable: float = 0.8) -> bool:
@@ -52,7 +55,7 @@ def wait_for_stable_file(path: str, timeout: float = 20.0, stable: float = 0.8) 
 def show_result_window(report: ce.Report):
     """用中文窗口展示检测报告。"""
     root = tk.Tk()
-    root.title("分件碰撞检测结果")
+    root.title(T("分件碰撞检测结果", "Collision Check Result"))
     root.geometry("760x560")
     root.minsize(640, 440)
 
@@ -65,19 +68,19 @@ def show_result_window(report: ce.Report):
     header.pack(fill="x")
 
     if hits:
-        title = "⚠ 发现 %d 处子工具相交" % len(hits)
+        title = T("⚠ 发现 %d 处子工具相交", "⚠ %d SubTool intersection(s) found") % len(hits)
         color = "#C0392B"
     else:
-        title = "✓ 未发现任何相交"
+        title = T("✓ 未发现任何相交", "✓ No intersections found")
         color = "#1E8449"
     tk.Label(header, text=title, font=("Microsoft YaHei", 15, "bold"),
              fg=color).pack(anchor="w")
 
-    meta = ("检测时间：%s    子工具：%d 个    配对：%d 组    耗时：%.2f 秒"
+    meta = (T("检测时间：%s    子工具：%d 个    配对：%d 组    耗时：%.2f 秒", "Checked at: %s    SubTools: %d    Pairs: %d    Time: %.2f s")
             % (report.timestamp, len(report.subtools), report.pair_count,
                report.elapsed_sec))
     tk.Label(header, text=meta, font=font_normal, fg="#555555").pack(anchor="w", pady=(6, 0))
-    tk.Label(header, text="检测到相交的部件对：", font=font_bold).pack(anchor="w", pady=(14, 4))
+    tk.Label(header, text=T("检测到相交的部件对：", "Intersecting pairs:"), font=font_bold).pack(anchor="w", pady=(14, 4))
 
     # 相交对列表
     list_frame = tk.Frame(root, padx=16)
@@ -88,14 +91,14 @@ def show_result_window(report: ce.Report):
     listbox.config(yscrollcommand=scroll.set)
     if hits:
         for n, p in enumerate(hits, 1):
-            listbox.insert("end", "  %d.  「%s」   ×   「%s」" % (n, p.name_a, p.name_b))
+            listbox.insert("end", T("  %d.  「%s」   ×   「%s」", '  %d.  "%s"   x   "%s"') % (n, p.name_a, p.name_b))
     else:
-        listbox.insert("end", "  所有子工具彼此分离，未发现穿透。")
+        listbox.insert("end", T("  所有子工具彼此分离，未发现穿透。", "  All SubTools are separate; nothing passes through another."))
     listbox.pack(side="left", fill="both", expand=True)
     scroll.pack(side="right", fill="y")
 
     # 详细报告
-    tk.Label(root, text="详细报告：", font=font_bold).pack(anchor="w", padx=16, pady=(14, 4))
+    tk.Label(root, text=T("详细报告：", "Full report:"), font=font_bold).pack(anchor="w", padx=16, pady=(14, 4))
     txt = scrolledtext.ScrolledText(root, font=("Consolas", 9), wrap="word")
     txt.pack(fill="both", expand=True, padx=16, pady=(0, 8))
     txt.insert("1.0", ce.format_text_report(report))
@@ -103,9 +106,9 @@ def show_result_window(report: ce.Report):
 
     footer = tk.Frame(root, padx=16, pady=(0, 14))
     footer.pack(fill="x")
-    tk.Label(footer, text="检测结果已保存到插件目录，并追加到检测记录文件。",
+    tk.Label(footer, text=T("检测结果已保存到插件目录，并追加到检测记录文件。", "Saved to the plugin folder and added to the log."),
              font=font_normal, fg="#555555").pack(side="left")
-    tk.Button(footer, text="关闭", font=font_normal,
+    tk.Button(footer, text=T("关闭", "Close"), font=font_normal,
               command=root.destroy, width=10).pack(side="right")
 
     # 置顶提醒
@@ -119,7 +122,7 @@ def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     obj_path = DEFAULT_OBJ
     wait_sec = 12.0
-    version = "自动"
+    version = T("自动", "auto")
 
     if "--obj" in argv:
         i = argv.index("--obj")
@@ -142,8 +145,8 @@ def main(argv=None):
         root = tk.Tk()
         root.withdraw()
         messagebox.showerror(
-            "检测失败",
-            "未找到可用的导出文件：\n%s\n\n请确认已在 ZBrush 中进入 Edit 模式并成功导出 OBJ。" % obj_path,
+            T("检测失败", "Check failed"),
+            T("未找到可用的导出文件：\n%s\n\n请确认已在 ZBrush 中进入 Edit 模式并成功导出 OBJ。", "No usable export file found:\n%s\n\nMake sure ZBrush is in Edit mode and the OBJ was exported.") % obj_path,
         )
         return 2
 
@@ -152,12 +155,12 @@ def main(argv=None):
     except Exception as exc:  # 显示中文错误，不暴露英文堆栈
         root = tk.Tk()
         root.withdraw()
-        messagebox.showerror("检测出错", "检测过程中出现错误：\n%s" % exc)
+        messagebox.showerror(T("检测出错", "Check error"), T("检测过程中出现错误：\n%s", "An error occurred during the check:\n%s") % exc)
         return 3
 
     # 保存结果 + 追加记录
     os.makedirs(EXPORT_DIR, exist_ok=True)
-    with open(os.path.join(EXPORT_DIR, "碰撞检测结果.txt"), "w", encoding="utf-8") as fh:
+    with open(os.path.join(EXPORT_DIR, T("碰撞检测结果.txt", "collision_result.txt")), "w", encoding="utf-8") as fh:
         fh.write(ce.format_text_report(report))
     ce.append_history(report, HISTORY)
 
