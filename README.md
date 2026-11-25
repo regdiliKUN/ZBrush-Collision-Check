@@ -56,7 +56,7 @@ py -3 installer\自检.py           安装后自检
 
 ## English
 
-An English interface is available (macro messages, result window, report and log). Install it with **`Install-EN.bat`** instead of `安装.bat` (or run the installer with `--lang en`). Everything else is the same: close ZBrush, run the installer, reopen ZBrush, then use **Macro > Collision Check > Quick Check / Full Check**. Results are saved to `C:\ZBCollisioneport.txt` and `collision_log.txt`.
+An English interface is available (macro messages, result window, report and log). Install it with **`Install-EN.bat`** instead of `安装.bat` (or run the installer with `--lang en`). Everything else is the same: close ZBrush, run the installer, reopen ZBrush, then use **Macro > Collision Check > Quick Check / Full Check**. Results are saved to `C:\ZBCollision\report.txt` and `collision_log.txt`.
 
 The English build has passed the automated tests but has not yet been tried inside ZBrush; please report anything odd in Issues.
 
