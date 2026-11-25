@@ -4,7 +4,7 @@
 
 - ✅ 支持 **ZBrush 2025.0.1** 和 **ZBrush 2022.0.5**（两版均已实机测试）
 - ✅ **不用装 Python**：下载安装包，双击 `安装.bat` 就能用，换电脑也一样
-- ✅ 中文结果窗口：直接列出“哪个部件和哪个部件撞了”
+- ✅ 中英文结果窗口：直接列出“哪个部件和哪个部件撞了”
 - ✅ 两种模式：**快速检测**（只判断撞没撞，速度快）/ **完整检测**（列出每一对的全部相交点和坐标）
 - ✅ 只读检测：只导出、不修改你的模型；检测完自动恢复你原来的选中和显示状态
 
@@ -13,12 +13,16 @@
 ## 下载安装
 
 1. 打开 [Releases 页面](../../releases/latest)，下载 `ZBrush-Collision-Check-v*.zip` 并解压。
-2. **先关闭 ZBrush**，双击解压目录里的 `安装.bat`。
+2. **先关闭 ZBrush**，双击解压目录里的 `安装.bat` 安装中文版，或双击 `Install-EN.bat` 安装英文版。
    安装程序会自动找到电脑上的 ZBrush（注册表 + 常见安装目录），并把检测程序装到 `C:\ZBCollision`。
 3. 重新打开 ZBrush。
 
 > ZBrush 装在比较特别的位置、没被自动找到？用命令行运行：
 > `安装.bat --zbrush-path "你的ZBrush安装目录"`（就是有 ZBrush.exe 的那一层）。
+
+## English quick start
+
+Close ZBrush, extract the Release ZIP, and run `Install-EN.bat`. The ZIP includes a standalone detector. Reopen ZBrush, enter Edit mode with two or more SubTools, then choose **Macro → Collision Check → Quick Check** or **Full Check**. Reports are saved by default to `C:\ZBCollision`.
 
 ## 使用方法
 
@@ -26,8 +30,8 @@
 2. 顶部菜单 **宏（Macro）** → **Collision Check** 文件夹：
    - **Quick Check**：快速检测，每对只记第一处相交点；
    - **Full Check**：完整检测，列出每对的全部相交点。
-3. 稍等几秒，会弹出中文结果窗口。结果同时保存在 `C:\ZBCollision\`：
-   `完整报告.txt`、`result.json`，以及累积的 `碰撞检测记录.txt`。
+3. 稍等几秒，会弹出所选语言的结果窗口。结果同时保存在 `C:\ZBCollision\`：
+   中文版生成 `完整报告.txt` 和 `碰撞检测记录.txt`，英文版生成 `report.txt` 和 `collision_log.txt`。两个版本都生成 `result.json`。
 
 子工具在报告里按面板顺序显示为「子工具 1、子工具 2……」（1 = 子工具列表最上面那个）。
 
